@@ -27,8 +27,11 @@
 #import "cocos2d.h"
 #import <VungleSDK/VungleSDK.h>
 
-@interface AppController : CCAppDelegate
+@interface AppController : CCAppDelegate<VungleSDKDelegate>
+
 {
+    BOOL  showinter_;
+
 }
 -(void) showInterstitial;
 

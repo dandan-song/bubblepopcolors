@@ -57,19 +57,29 @@
     // Play a Vungle ad (with default options)
     VungleSDK* sdk = [VungleSDK sharedSDK];
     NSError *error;
+
     [sdk playAd:self.navController error:&error];
     if (error) {
         NSLog(@"Error encountered playing ad: %@", error);
+        showinter_ = TRUE;
+
+    } else {
+        showinter_ = FALSE;
+
     }
  
 }
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+    showinter_ = FALSE;
+
     NSString* appID = @"572a53e6faf583543500003e";
     VungleSDK* sdk = [VungleSDK sharedSDK];
     // start vungle publisher library
     [sdk startWithAppId:appID];
+    [[VungleSDK sharedSDK] setDelegate:self];
+
     
     // Configure Cocos2d with the options set in SpriteBuilder
     NSString* configPath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"Published-iOS"]; // TODO: add support for Published-Android support
@@ -113,5 +123,69 @@
 {
     return [CCBReader loadAsScene:@"MainScene"];
 }
+#pragma mark - VungleSDK Delegate
+
+- (void)vungleSDKAdPlayableChanged:(BOOL)isAdPlayable {
+    if (isAdPlayable) {
+        NSLog(@"An ad is available for playback");
+        if (showinter_){
+            
+        [NSTimer scheduledTimerWithTimeInterval:10.0f target:self selector:@selector(showInterstitial) userInfo:nil repeats:NO];      
+             
+        }
+         /*if (!_showAdButton.enabled || !_showAdWithOptionsButton.enabled) {
+            [self enableAdButtons:YES];
+        }*/
+        
+    } else {
+        NSLog(@"No ads currently available for playback");
+        /*[self enableAdButtons:NO];*/
+    }
+ }
+
+- (void)vungleSDKwillShowAd {
+    NSLog(@"An ad is about to be played!");
+    
+    [OALSimpleAudio sharedInstance].bgMuted = YES;
+    [OALSimpleAudio sharedInstance].bgPaused = YES;
+    [[OALSimpleAudio sharedInstance] stopAllEffects];
+    
+
+    //Use this delegate method to pause animations, sound, etc.
+}
+
+- (void) vungleSDKwillCloseAdWithViewInfo:(NSDictionary *)viewInfo willPresentProductSheet:(BOOL)willPresentProductSheet {
+    if (willPresentProductSheet) {
+        //In this case we don't want to resume animations and sound, the user hasn't returned to the app yet
+        NSLog(@"The ad presented was tapped and the user is now being shown the App Product Sheet");
+        NSLog(@"ViewInfo Dictionary:");
+        for(NSString * key in [viewInfo allKeys]) {
+            NSLog(@"%@ : %@", key, [[viewInfo objectForKey:key] description]);
+        }
+    } else {
+        //In this case the user has declined to download the advertised application and is now returning fully to the main app
+        //Animations / Sound / Gameplay can be resumed now
+        NSLog(@"The ad presented was not tapped - the user has returned to the app");
+        NSLog(@"ViewInfo Dictionary:");
+        for(NSString * key in [viewInfo allKeys]) {
+            NSLog(@"%@ : %@", key, [[viewInfo objectForKey:key] description]);
+        }
+        
+        [OALSimpleAudio sharedInstance].bgMuted = NO;
+        [OALSimpleAudio sharedInstance].bgPaused = NO;
+        
+ 
+    }
+}
+
+- (void)vungleSDKwillCloseProductSheet:(id)productSheet {
+    NSLog(@"The user has downloaded an advertised application and is now returning to the main app");
+    //This method can be used to resume animations, sound, etc. if a user was presented a product sheet earlier
+    
+    [OALSimpleAudio sharedInstance].bgMuted = NO;
+    [OALSimpleAudio sharedInstance].bgPaused = NO;
+    
+}
+
 
 @end
